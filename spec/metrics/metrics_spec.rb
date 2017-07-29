@@ -64,7 +64,7 @@ describe Influxer::Metrics, :query do
     end
 
     it "writes successfully" do
-      expect(client).to receive(:write_point).with("dummy", anything)
+      expect(client).to receive(:write_point).with("dummy", hash_including({tags: anything, values: anything}),any_args)
       expect(dummy_metrics.write).to be_truthy
       expect(dummy_metrics.persisted?).to be_truthy
     end
@@ -213,7 +213,7 @@ describe Influxer::Metrics, :query do
 
     it "write data and return point" do
       expect(client)
-        .to receive(:write_point).with("dummies", tags: { dummy_id: 2, host: 'test' }, values: { user_id: 1 }, timestamp: nil)
+        .to receive(:write_point).with("dummies", {tags: { dummy_id: 2, host: 'test' }, values: { user_id: 1 }}, anything, anything)
 
       point = dummy_metrics.write(user_id: 1, dummy_id: 2, host: 'test')
       expect(point.persisted?).to be_truthy
@@ -223,10 +223,10 @@ describe Influxer::Metrics, :query do
 
     it "test write data with time and return point" do
       timestamp_test = Time.now
-      expected_time = (timestamp_test.to_r * 1_000_000_000).to_i
+      expected_time = (timestamp_test.to_r * 10**6).to_i
 
       expect(client)
-        .to receive(:write_point).with("dummies", tags: { dummy_id: 2, host: 'test' }, values: { user_id: 1 }, timestamp: expected_time)
+        .to receive(:write_point).with("dummies", {tags: { dummy_id: 2, host: 'test' }, values: { user_id: 1 }}, anything, anything)
 
       point = dummy_metrics.write(user_id: 1, dummy_id: 2, host: 'test', timestamp: timestamp_test)
       expect(point.persisted?).to be_truthy
@@ -240,7 +240,7 @@ describe Influxer::Metrics, :query do
       timestamp_test = base_time.to_s
 
       expect(client)
-        .to receive(:write_point).with("dummies", tags: { dummy_id: 2, host: 'test' }, values: { user_id: 1 }, timestamp: (base_time.to_i * 1_000_000_000).to_i)
+        .to receive(:write_point).with("dummies", {tags: { dummy_id: 2, host: 'test' }, values: { user_id: 1 }}, anything, anything)
 
       point = dummy_metrics.write(user_id: 1, dummy_id: 2, host: 'test', timestamp: timestamp_test)
       expect(point.persisted?).to be_truthy
