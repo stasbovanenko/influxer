@@ -37,9 +37,8 @@ module Influxer
         to: :all
       )
 
-      attr_reader :series
+      attr_reader :series, :retention_policy, :time_precision
       attr_accessor :tag_names
-      attr_accessor :retention_policy
 
       def attributes(*attrs)
         attrs.each do |name|
@@ -70,6 +69,14 @@ module Influxer
 
       def set_retention_policy(policy_name)
         @retention_policy = policy_name
+      end
+
+      def set_time_precision(t)
+        @time_precision = t
+      end
+
+      def set_time_precision(t)
+        @time_precision = t
       end
 
       # rubocop:disable Metrics/MethodLength
@@ -114,7 +121,7 @@ module Influxer
           end
         else
           if retention_policy.present?
-            [quote(@retention_policy), quote(val)].join('.')
+            [quote(retention_policy), quote(val)].join('.')
           else
             quote(val)
           end
@@ -126,6 +133,7 @@ module Influxer
       end
 
       # rubocop:enable Metrics/MethodLength
+
     end
 
     attr_accessor :timestamp
@@ -153,8 +161,16 @@ module Influxer
     end
 
     def write_point
-      client.write_point unquote(series), values: values, tags: tags, timestamp: parsed_timestamp
+      client.write_point unquote(series), {tags: tags, values: values}, time_precision, retention_policy
       @persisted = true
+    end
+
+    def time_precision
+      self.class.time_precision || Influxer.config.time_precision
+    end
+
+    def retention_policy
+      self.class.retention_policy
     end
 
     def persisted?
