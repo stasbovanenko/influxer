@@ -31,6 +31,30 @@ module Influxer
         self.class.tag_names
       end
 
+      def default_values
+        self.class.default_values || {}
+      end
+
+      def field_types
+        self.class.field_types || {}
+      end
+
+      def cast_types
+        field_types.each {|k,v| @attributes[k] = cast_type(@attributes[k], v) }
+      end
+
+      def cast_type(val, type)
+        if [:float, :decimal].include? type
+          val.to_f
+        elsif [:integer, :number].include? type
+          val.to_i
+        elsif [:string].include? type
+          val.to_s
+        else
+          val
+        end
+      end
+
     end
 
     class_methods do
@@ -51,9 +75,45 @@ module Influxer
       end
 
       def tags(*attrs)
-        attributes(*attrs)
-        self.tag_names ||= []
-        self.tag_names += attrs.map(&:to_s)
+        opt = attrs.pop if attrs.last.is_a?(Hash)
+        attrs.each {|name| tag(name, opt)}
+      end
+
+      def tag(name, opt)
+        (self.tag_names ||= []) << name.to_s
+        field(name, opt)
+      end
+
+      def fields(*attrs)
+        opt = attrs.pop if attrs.last.is_a?(Hash)
+        attrs.each {|name| field(name, opt)}
+      end
+
+      def field(name, opt)
+        if opt
+          self.field_types[name] = opt[:type] if opt[:type]
+          self.default_values[name] = opt[:default] if opt[:default]
+        end
+
+        define_method("#{name}=") do |val|
+          @attributes[name] = field_types[name] ? cast_type(val, field_types[name]) : val
+        end
+
+        # define_method(name.to_s) do
+        #   @attributes[name] || default_values[name]
+        # end
+        define_method(name.to_s) do
+          @attributes[name]
+        end
+
+      end
+
+      def default_values
+        @default_values ||= {}
+      end
+
+      def field_types
+        @field_types ||= {}
       end
 
       def tag?(name)
@@ -86,6 +146,12 @@ module Influxer
       end
       # rubocop:enable Metrics/MethodLength
       # rubocop:enable Metrics/AbcSize
+
+      # Macro style aliases to make class config look pretty
+      alias_method :retention, :set_retention_policy
+      alias_method :precision, :set_time_precision
+      alias_method :measurement, :set_series
+
     end
 
   end

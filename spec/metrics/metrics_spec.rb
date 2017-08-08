@@ -3,6 +3,7 @@ require 'spec_helper'
 describe Influxer::Metrics, :query do
   let(:metrics) { described_class.new }
   let(:dummy_metrics) { DummyMetrics.new dummy_id: 1, user_id: 1 }
+  let(:market_metrics) { MarketMetrics.new volume: 666, market_id: 1.0, price_delta: 100 }
 
   subject { metrics }
 
@@ -10,9 +11,16 @@ describe Influxer::Metrics, :query do
     subject { described_class }
 
     specify { is_expected.to respond_to :attributes }
+    specify { is_expected.to respond_to :field }
+    specify { is_expected.to respond_to :fields }
+    specify { is_expected.to respond_to :tag }
+    specify { is_expected.to respond_to :tags }
     specify { is_expected.to respond_to :set_series }
     specify { is_expected.to respond_to :set_retention_policy }
     specify { is_expected.to respond_to :series }
+    specify { is_expected.to respond_to :measurement }
+    specify { is_expected.to respond_to :retention }
+    specify { is_expected.to respond_to :precision }
     specify { is_expected.to respond_to :write }
     specify { is_expected.to respond_to :write! }
 
@@ -40,13 +48,24 @@ describe Influxer::Metrics, :query do
   end
 
   describe "#initialize" do
+    # it "sets default values" do
+    #   m = MarketMetrics.new
+    #   expect(m.exchange_id).to eq 1234
+    #   expect(m.symbol).to eq 'USDRUR'
+    # end
     it "assigns initial values in constructor" do
       m = DummyMetrics.new(dummy_id: 1)
       expect(m.dummy_id).to eq 1
     end
+    # it "assigns values in constructor over default values" do
+    #   m = MarketMetrics.new(exchange_id: 100)
+    #   expect(m.exchange_id).to eq 100
+    #   expect(m.symbol).to eq 'USDRUR'
+    # end
   end
 
   describe "#write" do
+  # binding.pry
     it "doesn't write if required attribute is missing" do
       m = DummyMetrics.new(dummy_id: 1)
       expect(client).not_to receive(:write_point)
@@ -135,6 +154,10 @@ describe Influxer::Metrics, :query do
 
     it "set several series" do
       expect(dummy_with_2_series.new.series).to eq "merge(\"events\",\"errors\")"
+    end
+
+    it "sets series from measurement and retention" do
+      expect(market_metrics.series).to eq "\"monthly\".\"market\""
     end
 
     it "quotes several series" do
@@ -252,6 +275,24 @@ describe Influxer::Metrics, :query do
     it "doesn't write data and return false if invalid" do
       expect(client).not_to receive(:write_point)
       expect(DummyMetrics.write(dummy_id: 2)).to be false
+    end
+  end
+
+  describe "types casting" do
+    it 'cast types when assing values in constructor' do
+      m = MarketMetrics.new(exchange_id: 10.0)
+      expect(m.exchange_id).to eq 10
+      expect(m.exchange_id).to be_a Integer
+    end
+    it 'cast type when assign directly' do
+      market_metrics.price = 44
+      expect(market_metrics.price).to eq 44.00
+      expect(market_metrics.price).to be_a Float
+    end
+    it 'Do its best in worst cases without raising exception' do
+      expect{market_metrics.exchange_id = 'crashsite'}.not_to raise_error
+      expect(market_metrics.exchange_id).to eq 0
+      expect{m = MarketMetrics.new(exchange_id: 'crashsite')}.not_to raise_error
     end
   end
 

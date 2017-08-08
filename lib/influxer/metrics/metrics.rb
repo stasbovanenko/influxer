@@ -18,11 +18,12 @@ module Influxer
       include ActiveModel::Model
     end
 
-    include ActiveModel::Validations
     extend  ActiveModel::Callbacks
 
     include Influxer::Attributes
     include Influxer::Scoping
+
+    include ActiveModel::Validations
 
     define_model_callbacks :write
 
@@ -84,12 +85,14 @@ module Influxer
     attr_accessor :timestamp
 
     def initialize(attributes = {})
+      # @attributes = default_values
       @attributes = {}
       @persisted = false
       super
     end
 
     def write
+      cast_types
       raise MetricsError if persisted?
 
       return false if invalid?
