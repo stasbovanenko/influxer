@@ -31,12 +31,12 @@ module Influxer
         self.class.tag_names
       end
 
-      def default_values
-        self.class.default_values || {}
+      def defaults
+        self.class.defaults
       end
 
       def field_types
-        self.class.field_types || {}
+        self.class.field_types
       end
 
       def cast_types
@@ -90,26 +90,23 @@ module Influxer
       end
 
       def field(name, opt)
-        if opt
-          self.field_types[name] = opt[:type] if opt[:type]
-          self.default_values[name] = opt[:default] if opt[:default]
+        unless opt.nil?
+          field_types[name] = opt[:type] if opt[:type]
+          defaults[name] = opt[:default] if opt[:default]
         end
 
         define_method("#{name}=") do |val|
           @attributes[name] = field_types[name] ? cast_type(val, field_types[name]) : val
         end
 
-        # define_method(name.to_s) do
-        #   @attributes[name] || default_values[name]
-        # end
         define_method(name.to_s) do
-          @attributes[name]
+          @attributes[name] #|| defaults[name]
         end
 
       end
 
-      def default_values
-        @default_values ||= {}
+      def defaults
+        @defaults ||= {}
       end
 
       def field_types

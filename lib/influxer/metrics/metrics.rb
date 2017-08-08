@@ -84,10 +84,10 @@ module Influxer
 
     attr_accessor :timestamp
 
-    def initialize(attributes = {})
-      # @attributes = default_values
-      @attributes = {}
+    def initialize(params = {})
+      @attributes={}
       @persisted = false
+      @attributes.update(defaults) unless defaults.empty?
       super
     end
 
